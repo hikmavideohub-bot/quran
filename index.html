@@ -2,137 +2,163 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>المصحف + المعجم</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>القرآن الكريم</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body {
-      font-family: 'Amiri', serif;
-      background: #fdfcf7;
-      margin: 20px;
-      font-size: 22px;
-      line-height: 2.5;
-      color: #222;
-    }
-    header { margin-bottom: 20px; }
-    select { font-size: 18px; padding: 5px 10px; }
-    .verse { margin-bottom: 15px; text-align: justify; }
-    .ayah-num { color: #666; margin: 0 4px; }
-    .word { cursor: pointer; padding: 2px 4px; border-radius: 4px; }
-    .word:hover { background: #eef; }
-    .tooltip {
-      position: absolute;
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 8px;
-      display: none;
-      z-index: 1000;
-      max-width: 300px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      font-size: 18px;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
+    body { background-color:#f8f9fa; color:#333; line-height:1.6; }
+    .container { max-width:1200px; margin:0 auto; padding:0 15px; }
+
+    /* الهيدر */
+    header { background:#fff; box-shadow:0 2px 10px rgba(0,0,0,0.1); position:sticky; top:0; z-index:100; }
+    .header-content { display:flex; justify-content:space-between; align-items:center; padding:15px 0; }
+    .logo h1 { font-size:24px; color:#2ca4ab; }
+    .logo span { color:#fd7e14; }
+
+    /* هيرو */
+    .hero { background:linear-gradient(to right,#2ca4ab,#1d8e95); color:white; padding:60px 0; text-align:center; }
+    .hero h2 { font-size:2.5rem; margin-bottom:20px; }
+
+    /* شبكة السور */
+    .content { padding:50px 0; }
+    .section-title { text-align:center; margin-bottom:40px; }
+    .surahs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:20px; }
+    .surah-card { background:white; border-radius:8px; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.05); cursor:pointer; transition:.3s; }
+    .surah-card:hover { transform:translateY(-5px); box-shadow:0 5px 15px rgba(0,0,0,0.1); }
+    .surah-number { background:#2ca4ab; color:white; width:35px; height:35px; display:flex; align-items:center; justify-content:center; border-radius:50%; margin-bottom:10px; }
+    .surah-name { font-size:1.3rem; color:#2ca4ab; margin-bottom:5px; }
+    .surah-info { color:#888; font-size:.9rem; }
+
+    /* عرض السورة */
+    #quran { padding:30px; background:white; border-radius:10px; margin:30px 0; line-height:2.5; font-size:22px; }
+    .verse { margin-bottom:15px; text-align:justify; }
+    .ayah-num { color:#666; margin:0 4px; }
+    .word { cursor:pointer; padding:2px 4px; border-radius:4px; }
+    .word:hover { background:#eef; }
+
+    /* Tooltip */
+    .tooltip { position:absolute; background:#fff; border:1px solid #ccc; padding:8px; display:none; z-index:1000; max-width:300px; box-shadow:0 2px 8px rgba(0,0,0,0.2); font-size:18px; }
   </style>
 </head>
 <body>
 
-<header>
-  <h2>📖 المصحف التفاعلي</h2>
-  <select id="suraSelect"></select>
-</header>
+  <!-- الهيدر -->
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <div class="logo"><h1>القرآن<span>.com</span></h1></div>
+      </div>
+    </div>
+  </header>
 
-<div id="quran"></div>
-<div id="tooltip" class="tooltip"></div>
+  <!-- هيرو -->
+  <section class="hero">
+    <div class="container">
+      <h2>📖 القرآن الكريم</h2>
+      <p>اضغط على أي سورة لعرضها، واضغط على الكلمة لتعرف معناها من المعجم.</p>
+    </div>
+  </section>
 
-<script>
-  let dictionary = {};
+  <!-- قائمة السور -->
+  <section class="content">
+    <div class="container">
+      <h2 class="section-title">سور القرآن الكريم</h2>
+      <div id="surahs" class="surahs-grid"></div>
+    </div>
+  </section>
 
-  // إزالة التشكيل + توحيد الحروف
-  function normalize(text) {
-    return text
-      .replace(/[\u064B-\u065F]/g, "")
-      .replace(/إ|أ|آ/g, "ا")
-      .replace(/ى/g, "ي")
-      .replace(/ؤ/g, "و")
-      .replace(/ئ/g, "ي")
-      .trim();
-  }
+  <!-- نص السورة -->
+  <div class="container">
+    <div id="quran"></div>
+    <div id="tooltip" class="tooltip"></div>
+  </div>
 
-  // تحميل المعجم
-  async function loadDictionary() {
-    const res = await fetch("dictionary.json"); // لازم الملف بجانب index.html
-    const raw = await res.json();
-    for (const [k,v] of Object.entries(raw)) {
-      dictionary[normalize(k)] = v;
+  <script>
+    let dictionary = {};
+
+    // إزالة التشكيل وتوحيد الحروف
+    function normalize(text) {
+      return text.replace(/[\u064B-\u065F]/g,"")
+                 .replace(/إ|أ|آ/g,"ا")
+                 .replace(/ى/g,"ي")
+                 .replace(/ؤ/g,"و")
+                 .replace(/ئ/g,"ي")
+                 .trim();
     }
-  }
 
-  // تحميل قائمة السور
-  async function loadSuras() {
-    const res = await fetch("https://api.quran.com/api/v4/chapters");
-    const data = await res.json();
-    const sel = document.getElementById("suraSelect");
-    data.chapters.forEach(ch => {
-      const opt = document.createElement("option");
-      opt.value = ch.id;
-      opt.textContent = `${ch.id}. ${ch.name_arabic}`;
-      sel.appendChild(opt);
-    });
-    sel.addEventListener("change", () => {
-      loadVerse(sel.value);
-    });
-  }
+    // تحميل المعجم
+    async function loadDictionary() {
+      const res = await fetch("dictionary.json"); // الملف بجانب index.html
+      const raw = await res.json();
+      for (const [k,v] of Object.entries(raw)) {
+        dictionary[normalize(k)] = v;
+      }
+    }
 
-  // تحميل سورة
-  async function loadVerse(sura) {
-    const container = document.getElementById("quran");
-    container.innerHTML = "";
-    const res = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${sura}?fields=text_uthmani&words=false`);
-    const data = await res.json();
-    data.verses.forEach(v => {
-      const div = document.createElement("div");
-      div.className = "verse";
-      v.text_uthmani.split(" ").forEach(w => {
-        const span = document.createElement("span");
-        span.className = "word";
-        span.textContent = w + " ";
-        span.addEventListener("click", (event) => {
-          showMeaning(w, event);
-          event.stopPropagation();
-        });
-        div.appendChild(span);
+    // تحميل قائمة السور
+    async function loadSuras() {
+      const res = await fetch("https://api.quran.com/api/v4/chapters");
+      const data = await res.json();
+      const grid = document.getElementById("surahs");
+      data.chapters.forEach(ch => {
+        const card = document.createElement("div");
+        card.className = "surah-card";
+        card.innerHTML = `
+          <div class="surah-number">${ch.id}</div>
+          <h3 class="surah-name">سورة ${ch.name_arabic}</h3>
+          <div class="surah-info">${ch.revelation_place === "makkah" ? "مكية" : "مدنية"} • ${ch.verses_count} آية</div>
+        `;
+        card.addEventListener("click",()=> loadVerse(ch.id, ch.name_arabic));
+        grid.appendChild(card);
       });
-      const num = document.createElement("span");
-      num.className = "ayah-num";
-      num.textContent = ` ﴿${v.verse_number}﴾`;
-      div.appendChild(num);
-      container.appendChild(div);
-    });
-  }
-
-  // عرض المعنى
-  function showMeaning(word, event) {
-    const tooltip = document.getElementById("tooltip");
-    const meaning = dictionary[normalize(word)] || "لا يوجد معنى";
-    tooltip.textContent = `${word} : ${meaning}`;
-    tooltip.style.left = event.pageX + "px";
-    tooltip.style.top = event.pageY + "px";
-    tooltip.style.display = "block";
-  }
-
-  // إخفاء المعنى عند الضغط خارج الكلمة
-  document.addEventListener("click", (e) => {
-    const tooltip = document.getElementById("tooltip");
-    if (!tooltip.contains(e.target) && !e.target.classList.contains("word")) {
-      tooltip.style.display = "none";
     }
-  });
 
-  // البداية
-  loadDictionary().then(() => {
-    loadSuras().then(() => {
-      loadVerse(1); // يبدأ بالفاتحة
-      document.getElementById("suraSelect").value = 1;
+    // تحميل السورة
+    async function loadVerse(suraId, suraName) {
+      const container = document.getElementById("quran");
+      container.innerHTML = `<h2 style="margin-bottom:20px;color:#2ca4ab;">سورة ${suraName}</h2>`;
+      const res = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${suraId}?fields=text_uthmani`);
+      const data = await res.json();
+      data.verses.forEach(v => {
+        const div = document.createElement("div");
+        div.className = "verse";
+        v.text_uthmani.split(" ").forEach(w => {
+          const span = document.createElement("span");
+          span.className = "word";
+          span.textContent = w+" ";
+          span.addEventListener("click",(event)=> showMeaning(w,event));
+          div.appendChild(span);
+        });
+        const num = document.createElement("span");
+        num.className = "ayah-num";
+        num.textContent = `﴿${v.verse_number}﴾`;
+        div.appendChild(num);
+        container.appendChild(div);
+      });
+    }
+
+    // عرض المعنى
+    function showMeaning(word,event){
+      const tooltip=document.getElementById("tooltip");
+      const meaning=dictionary[normalize(word)]||"لا يوجد معنى";
+      tooltip.textContent=`${word} : ${meaning}`;
+      tooltip.style.left=event.pageX+"px";
+      tooltip.style.top=event.pageY+"px";
+      tooltip.style.display="block";
+    }
+
+    // إخفاء المعنى عند الضغط خارج الكلمة
+    document.addEventListener("click",(e)=>{
+      const tooltip=document.getElementById("tooltip");
+      if(!tooltip.contains(e.target)&&!e.target.classList.contains("word")){
+        tooltip.style.display="none";
+      }
     });
-  });
-</script>
+
+    // البداية
+    loadDictionary().then(()=> loadSuras());
+  </script>
 
 </body>
 </html>
