@@ -69,19 +69,20 @@
   }
 
   // تحميل المعجم
-  async function loadDictionary() {
-    try {
-      const res = await fetch("https://hikmavideohub-bot.github.io/quran/dictionary.json");
-      if (!res.ok) throw new Error("Failed to load dictionary: " + res.status);
-      const rawDict = await res.json();
-      // نعمل نسخة مطبّعة عشان نبحث بسهولة
-      for (const [key, val] of Object.entries(rawDict)) {
-        dictionary[normalize(key)] = val;
-      }
-    } catch (err) {
-      console.error("Error loading dictionary:", err);
+async function loadDictionary() {
+  try {
+    const res = await fetch("dictionary.json"); // الملف موجود مع index.html
+    if (!res.ok) throw new Error("Failed to load dictionary: " + res.status);
+    const rawDict = await res.json();
+    for (const [key, val] of Object.entries(rawDict)) {
+      dictionary[normalize(key)] = val;
     }
+    console.log("Dictionary loaded:", dictionary);
+  } catch (err) {
+    console.error("Error loading dictionary:", err);
   }
+}
+
 
   // تحميل قائمة السور
   async function loadSurasList() {
@@ -105,40 +106,41 @@
   }
 
   // تحميل سورة
-  async function loadVerse(sura = 1) {
-    const container = document.getElementById("quran");
-    container.innerHTML = "";
+async function loadVerse(sura = 1) {
+  const container = document.getElementById("quran");
+  container.innerHTML = "";
 
-    try {
-      const res = await fetch(`https://api.quran.com/api/v4/quran/verses/uthmani?sura_number=${sura}`);
-      if (!res.ok) throw new Error("Failed to load Quran text: " + res.status);
-      const data = await res.json();
+  try {
+    const res = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${sura}?language=ar&words=false&translations=false&fields=text_uthmani`);
+    if (!res.ok) throw new Error("Failed to load Quran text: " + res.status);
+    const data = await res.json();
 
-      data.verses.forEach(v => {
-        const verseDiv = document.createElement("div");
-        verseDiv.className = "verse";
+    data.verses.forEach(v => {
+      const verseDiv = document.createElement("div");
+      verseDiv.className = "verse";
 
-        v.text_uthmani.split(" ").forEach(word => {
-          const span = document.createElement("span");
-          span.className = "word";
-          span.textContent = word + " ";
-          span.addEventListener("click", (event) => {
-            showMeaning(word, event);
-          });
-          verseDiv.appendChild(span);
+      v.text_uthmani.split(" ").forEach(word => {
+        const span = document.createElement("span");
+        span.className = "word";
+        span.textContent = word + " ";
+        span.addEventListener("click", (event) => {
+          showMeaning(word, event);
         });
-
-        const ayahNum = document.createElement("span");
-        ayahNum.className = "ayah-num";
-        ayahNum.textContent = ` ﴿${v.verse_number}﴾ `;
-        verseDiv.appendChild(ayahNum);
-
-        container.appendChild(verseDiv);
+        verseDiv.appendChild(span);
       });
-    } catch (err) {
-      console.error("Error loading Quran:", err);
-    }
+
+      const ayahNum = document.createElement("span");
+      ayahNum.className = "ayah-num";
+      ayahNum.textContent = ` ﴿${v.verse_number}﴾ `;
+      verseDiv.appendChild(ayahNum);
+
+      container.appendChild(verseDiv);
+    });
+  } catch (err) {
+    console.error("Error loading Quran:", err);
   }
+}
+
 
   // عرض المعنى
   function showMeaning(word, event) {
