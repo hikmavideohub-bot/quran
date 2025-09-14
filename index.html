@@ -96,23 +96,31 @@
       }
     }
 
-    // تحميل قائمة السور
-    async function loadSuras() {
-      const res = await fetch("https://api.quran.com/api/v4/chapters");
-      const data = await res.json();
-      const grid = document.getElementById("surahs");
-      data.chapters.forEach(ch => {
-        const card = document.createElement("div");
-        card.className = "surah-card";
-        card.innerHTML = `
-          <div class="surah-number">${ch.id}</div>
-          <h3 class="surah-name">سورة ${ch.name_arabic}</h3>
-          <div class="surah-info">${ch.revelation_place === "makkah" ? "مكية" : "مدنية"} • ${ch.verses_count} آية</div>
-        `;
-        card.addEventListener("click",()=> loadVerse(ch.id, ch.name_arabic));
-        grid.appendChild(card);
-      });
-    }
+  // تحميل قائمة السور
+async function loadSuras() {
+  try {
+    const res = await fetch("https://api.quran.com/api/v4/chapters?language=ar");
+    if (!res.ok) throw new Error("خطأ في تحميل قائمة السور");
+    const data = await res.json();
+    const grid = document.getElementById("surahs");
+    grid.innerHTML = ""; // تأكد إنها فاضية قبل التعبئة
+
+    data.chapters.forEach(ch => {
+      const card = document.createElement("div");
+      card.className = "surah-card";
+      card.innerHTML = `
+        <div class="surah-number">${ch.id}</div>
+        <h3 class="surah-name">سورة ${ch.name_arabic}</h3>
+        <div class="surah-info">${ch.revelation_place === "makkah" ? "مكية" : "مدنية"} • ${ch.verses_count} آية</div>
+      `;
+      card.addEventListener("click",()=> loadVerse(ch.id, ch.name_arabic));
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    console.error(err);
+    document.getElementById("surahs").innerHTML = "<p style='color:red'>تعذّر تحميل قائمة السور</p>";
+  }
+}
 
     // تحميل السورة
     async function loadVerse(suraId, suraName) {
