@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>المصحف التفاعلي</title>
+  <style>
+    body { font-family: 'Amiri', serif; line-height: 2; }
+    .word { cursor: pointer; padding: 2px; }
+    .tooltip {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 8px;
+      display: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+<div id="quran"></div>
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+  let dictionary = {};
+
+  // تحميل المعجم مرة واحدة عند بدء الصفحة
+  async function loadDictionary() {
+    try {
+      const res = await fetch("https://hikmavideohub-bot.github.io/quran/dictionary.json");
+      if (!res.ok) throw new Error("Failed to load dictionary: " + res.status);
+      dictionary = await res.json();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function loadVerse(sura = 1) {
+    const container = document.getElementById("quran");
+    container.innerHTML = "";  // نظّف المحتوى الحالي
+
+    try {
+      const res = await fetch(`https://api.quran.com/api/v4/quran/verses/uthmani?sura_number=${sura}`);
+      if (!res.ok) throw new Error("Failed to load Quran text: " + res.status);
+      const data = await res.json();
+
+      data.verses.forEach(v => {
+        const verseDiv = document.createElement("div");
+        // تقسيم النص إلى كلمات
+        v.text_uthmani.split(" ").forEach(word => {
+          const span = document.createElement("span");
+          span.className = "word";
+          span.textContent = word + " ";
+          span.addEventListener("click", (event) => {
+            showMeaning(word, event);
+          });
+          verseDiv.appendChild(span);
+        });
+        container.appendChild(verseDiv);
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function showMeaning(word, event) {
+    const tooltip = document.getElementById("tooltip");
+    const meaning = dictionary[word] || "لم يتم العثور على معنى";
+    tooltip.textContent = meaning;
+    tooltip.style.left = event.pageX + "px";
+    tooltip.style.top = event.pageY + "px";
+    tooltip.style.display = "block";
+
+    // إخفاء التولتيب لو ضغط في أي مكان آخر
+    document.addEventListener("click", (e) => {
+      if (!tooltip.contains(e.target) && !e.target.classList.contains("word")) {
+        tooltip.style.display = "none";
+      }
+    }, { once: true });
+  }
+
+  // بداية تحميل المعجم والنص
+  loadDictionary().then(() => {
+    loadVerse(1);  // تقدر تغيّر السورة إذا تحب
+  });
+</script>
+
+</body>
+</html>
