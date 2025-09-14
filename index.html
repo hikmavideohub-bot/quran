@@ -2,33 +2,22 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>المصحف التفاعلي</title>
+  <title>المصحف + المعجم</title>
   <style>
-    body { 
-      font-family: 'Amiri', serif; 
-      background: #fdfcf7; 
-      margin: 30px; 
-      line-height: 2.5; 
+    body {
+      font-family: 'Amiri', serif;
+      background: #fdfcf7;
+      margin: 20px;
       font-size: 22px;
+      line-height: 2.5;
       color: #222;
     }
-    .verse {
-      margin-bottom: 15px;
-      text-align: justify;
-    }
-    .ayah-num {
-      color: #666;
-      font-size: 18px;
-      margin: 0 4px;
-    }
-    .word {
-      cursor: pointer;
-      padding: 2px 4px;
-      border-radius: 4px;
-    }
-    .word:hover {
-      background: #e8f3ff;
-    }
+    header { margin-bottom: 20px; }
+    select { font-size: 18px; padding: 5px 10px; }
+    .verse { margin-bottom: 15px; text-align: justify; }
+    .ayah-num { color: #666; margin: 0 4px; }
+    .word { cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+    .word:hover { background: #eef; }
     .tooltip {
       position: absolute;
       background: #fff;
@@ -40,120 +29,95 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       font-size: 18px;
     }
-    select {
-      font-size: 18px;
-      padding: 5px 10px;
-      margin-bottom: 20px;
-    }
   </style>
 </head>
 <body>
 
-<h2>📖 المصحف التفاعلي</h2>
-<select id="suraSelect"></select>
+<header>
+  <h2>📖 المصحف التفاعلي</h2>
+  <select id="suraSelect"></select>
+</header>
+
 <div id="quran"></div>
 <div id="tooltip" class="tooltip"></div>
 
 <script>
   let dictionary = {};
 
-  // دالة لإزالة التشكيل وتوحيد الحروف
+  // إزالة التشكيل + توحيد الحروف
   function normalize(text) {
     return text
-      .replace(/[\u064B-\u065F]/g, "") // إزالة التشكيل
-      .replace(/إ|أ|آ/g, "ا") // توحيد الألف
+      .replace(/[\u064B-\u065F]/g, "")
+      .replace(/إ|أ|آ/g, "ا")
       .replace(/ى/g, "ي")
       .replace(/ؤ/g, "و")
       .replace(/ئ/g, "ي")
       .trim();
   }
 
-  // تحميل المعجم من ملف محلي
+  // تحميل المعجم
   async function loadDictionary() {
-    try {
-      const res = await fetch("dictionary.json"); // الملف موجود مع index.html
-      if (!res.ok) throw new Error("Failed to load dictionary: " + res.status);
-      const rawDict = await res.json();
-      for (const [key, val] of Object.entries(rawDict)) {
-        dictionary[normalize(key)] = val;
-      }
-      console.log("Dictionary loaded:", dictionary);
-    } catch (err) {
-      console.error("Error loading dictionary:", err);
+    const res = await fetch("dictionary.json"); // لازم الملف بجانب index.html
+    const raw = await res.json();
+    for (const [k,v] of Object.entries(raw)) {
+      dictionary[normalize(k)] = v;
     }
   }
 
   // تحميل قائمة السور
-  async function loadSurasList() {
-    try {
-      const res = await fetch("https://api.quran.com/api/v4/chapters");
-      const data = await res.json();
-      const select = document.getElementById("suraSelect");
-      data.chapters.forEach(ch => {
-        const option = document.createElement("option");
-        option.value = ch.id;
-        option.textContent = `${ch.id}. ${ch.name_arabic}`;
-        select.appendChild(option);
-      });
-      // عند التغيير → حمّل السورة
-      select.addEventListener("change", () => {
-        loadVerse(select.value);
-      });
-    } catch (err) {
-      console.error("Error loading suras list:", err);
-    }
+  async function loadSuras() {
+    const res = await fetch("https://api.quran.com/api/v4/chapters");
+    const data = await res.json();
+    const sel = document.getElementById("suraSelect");
+    data.chapters.forEach(ch => {
+      const opt = document.createElement("option");
+      opt.value = ch.id;
+      opt.textContent = `${ch.id}. ${ch.name_arabic}`;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", () => {
+      loadVerse(sel.value);
+    });
   }
 
   // تحميل سورة
-  async function loadVerse(sura = 1) {
+  async function loadVerse(sura) {
     const container = document.getElementById("quran");
     container.innerHTML = "";
-
-    try {
-      const res = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${sura}?language=ar&words=false&translations=false&fields=text_uthmani`);
-      if (!res.ok) throw new Error("Failed to load Quran text: " + res.status);
-      const data = await res.json();
-
-      data.verses.forEach(v => {
-        const verseDiv = document.createElement("div");
-        verseDiv.className = "verse";
-
-        v.text_uthmani.split(" ").forEach(word => {
-          const span = document.createElement("span");
-          span.className = "word";
-          span.textContent = word + " ";
-          span.addEventListener("click", (event) => {
-            showMeaning(word, event);
-            event.stopPropagation(); // منع انتشار الضغط لباقي الصفحة
-          });
-          verseDiv.appendChild(span);
+    const res = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${sura}?fields=text_uthmani&words=false`);
+    const data = await res.json();
+    data.verses.forEach(v => {
+      const div = document.createElement("div");
+      div.className = "verse";
+      v.text_uthmani.split(" ").forEach(w => {
+        const span = document.createElement("span");
+        span.className = "word";
+        span.textContent = w + " ";
+        span.addEventListener("click", (event) => {
+          showMeaning(w, event);
+          event.stopPropagation();
         });
-
-        const ayahNum = document.createElement("span");
-        ayahNum.className = "ayah-num";
-        ayahNum.textContent = ` ﴿${v.verse_number}﴾ `;
-        verseDiv.appendChild(ayahNum);
-
-        container.appendChild(verseDiv);
+        div.appendChild(span);
       });
-    } catch (err) {
-      console.error("Error loading Quran:", err);
-    }
+      const num = document.createElement("span");
+      num.className = "ayah-num";
+      num.textContent = ` ﴿${v.verse_number}﴾`;
+      div.appendChild(num);
+      container.appendChild(div);
+    });
   }
 
   // عرض المعنى
   function showMeaning(word, event) {
     const tooltip = document.getElementById("tooltip");
-    const normalized = normalize(word);
-    const meaning = dictionary[normalized] || "لم يتم العثور على معنى";
-
-    tooltip.textContent = word + " : " + meaning;
+    const meaning = dictionary[normalize(word)] || "لا يوجد معنى";
+    tooltip.textContent = `${word} : ${meaning}`;
     tooltip.style.left = event.pageX + "px";
     tooltip.style.top = event.pageY + "px";
     tooltip.style.display = "block";
   }
 
-  // إخفاء التولتيب عند الضغط في أي مكان خارج الكلمة
+  // إخفاء المعنى عند الضغط خارج الكلمة
   document.addEventListener("click", (e) => {
     const tooltip = document.getElementById("tooltip");
     if (!tooltip.contains(e.target) && !e.target.classList.contains("word")) {
@@ -163,8 +127,8 @@
 
   // البداية
   loadDictionary().then(() => {
-    loadSurasList().then(() => {
-      loadVerse(1); // سورة الفاتحة
+    loadSuras().then(() => {
+      loadVerse(1); // يبدأ بالفاتحة
       document.getElementById("suraSelect").value = 1;
     });
   });
