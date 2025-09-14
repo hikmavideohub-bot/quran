@@ -30,12 +30,41 @@
     .surah-name { font-size:1.3rem; color:#2ca4ab; margin-bottom:5px; }
     .surah-info { color:#888; font-size:.9rem; }
 
-    /* عرض السورة */
-    #quran { padding:30px; background:white; border-radius:10px; margin:30px 0; line-height:2.5; font-size:22px; }
-    .verse { margin-bottom:15px; text-align:justify; }
-    .ayah-num { color:#666; margin:0 4px; }
-    .word { cursor:pointer; padding:2px 4px; border-radius:4px; }
-    .word:hover { background:#eef; }
+// تحميل السورة
+async function loadVerse(suraId, suraName) {
+  const container = document.getElementById("quran");
+  container.innerHTML = `<h2 style="margin-bottom:20px;color:#2ca4ab;">سورة ${suraName}</h2>`;
+
+  const res = await fetch(
+    `https://api.quran.com/api/v4/verses/by_chapter/${suraId}?language=ar&words=false&translations=false&fields=text_uthmani`
+  );
+  if (!res.ok) {
+    container.innerHTML += "<p style='color:red'>خطأ في تحميل السورة</p>";
+    return;
+  }
+
+  const data = await res.json();
+
+  data.verses.forEach(v => {
+    const div = document.createElement("div");
+    div.className = "verse";
+
+    v.text_uthmani.split(" ").forEach(w => {
+      const span = document.createElement("span");
+      span.className = "word";
+      span.textContent = w + " ";
+      span.addEventListener("click", (event) => showMeaning(w, event));
+      div.appendChild(span);
+    });
+
+    const num = document.createElement("span");
+    num.className = "ayah-num";
+    num.textContent = `﴿${v.verse_number}﴾`;
+    div.appendChild(num);
+
+    container.appendChild(div);
+  });
+}
 
     /* Tooltip */
     .tooltip { position:absolute; background:#fff; border:1px solid #ccc; padding:8px; display:none; z-index:1000; max-width:300px; box-shadow:0 2px 8px rgba(0,0,0,0.2); font-size:18px; }
